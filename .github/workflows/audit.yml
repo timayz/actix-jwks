@@ -1,0 +1,20 @@
+name: Audit
+on:
+  schedule:
+    - cron: 0 9 * * 1
+  pull_request:
+    paths:
+      - "**/Cargo.toml"
+      - "**/Cargo.lock"
+
+jobs:
+  audit:
+    if: "!contains(github.event.commits[0].message, '[skip ci]')"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v1
+      - name: Audit
+        uses: actions-rs/cargo@v1
+        with:
+          command: audit
