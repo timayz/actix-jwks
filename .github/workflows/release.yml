@@ -26,6 +26,12 @@ jobs:
           toolchain: stable
           override: true
 
+      - name: Install semantic-release-rust
+        uses: actions-rs/cargo@v1
+        with:
+          command: install
+          args: semantic-release-rust
+
       # The release build is used in the Semantic Release step
       - name: Build
         uses: actions-rs/cargo@v1
@@ -37,12 +43,10 @@ jobs:
         uses: cycjimmy/semantic-release-action@v2
         id: semantic
         with:
-          semantic_version: 17.1.1
+          semantic_version: 19.0.2
           extra_plugins: |
-            @semantic-release/exec@5.0
-            @semantic-release/git@9.0
+            @semantic-release/exec@6.0
+            @semantic-release/git@10.0
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-
-# cargo install semantic-release-rust
