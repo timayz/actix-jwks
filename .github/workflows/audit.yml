@@ -8,13 +8,5 @@ on:
       - "**/Cargo.lock"
 
 jobs:
-  audit:
-    if: "!contains(github.event.commits[0].message, '[skip ci]')"
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v1
-      - name: Audit
-        uses: actions-rs/cargo@v1
-        with:
-          command: audit
+  rust:
+    uses: timada-org/.github/.github/workflows/rust-audit.yml@v1.2.1
