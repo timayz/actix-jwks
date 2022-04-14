@@ -13,10 +13,8 @@ jobs:
           - stable
           - beta
           - nightly
-          - 1.45.0
 
     runs-on: ubuntu-latest
-    if: github.actor != 'sbosnick-bot'
 
     steps:
       - name: Checkout
@@ -38,9 +36,10 @@ jobs:
 
       - name: Clippy
         if: matrix.rust == 'stable'
-        uses: actions-rs/clippy-check@v1
+        uses: actions-rs/cargo@v1
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          command: clippy
+          args: --all-features -- -D warnings
 
       - name: Test
         uses: actions-rs/cargo@v1
