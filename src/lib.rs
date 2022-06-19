@@ -1,4 +1,3 @@
-use josekit::jwt::JwtPayload;
 use std::sync::Arc;
 use std::{pin::Pin, time::SystemTime};
 use tracing::error;
@@ -130,13 +129,13 @@ impl JwksClient {
     }
 }
 
-pub struct User {
+pub struct JwtPayload {
     pub subject: String,
     pub token: String,
-    pub payload: JwtPayload,
+    pub payload: jwt::JwtPayload,
 }
 
-impl FromRequest for User {
+impl FromRequest for JwtPayload {
     type Error = ActixError;
     type Future = Pin<Box<dyn Future<Output = Result<Self, Self::Error>>>>;
 
