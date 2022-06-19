@@ -8,6 +8,15 @@ description = "Decode jwt with jwks from actix request"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+awc = "3.0.0"
+actix-web = "4.0.1"
+josekit = "0.8.0"
+parking_lot = "0.12.1"
+futures-util = "0.3.21"
+serde = "1.0.81"
+serde_json = "1.0.81"
+thiserror = "1.0.31"
+tracing = "0.1.35"
 
 [workspace]
 
