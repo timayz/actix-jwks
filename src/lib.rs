@@ -44,9 +44,7 @@ impl From<josekit::JoseError> for Error {
 
 impl ResponseError for Error {
     fn status_code(&self) -> StatusCode {
-        match *self {
-            _ => StatusCode::INTERNAL_SERVER_ERROR,
-        }
+        StatusCode::INTERNAL_SERVER_ERROR
     }
 
     fn error_response(&self) -> HttpResponse {
