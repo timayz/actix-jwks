@@ -4,6 +4,9 @@ version ="1.1.0"
 edition = "2021"
 license = "Apache-2.0"
 description = "Decode jwt with jwks from actix request"
+repository = "https://github.com/timada-org/actix-jwks"
+homepage = "https://docs.rs/actix-jwks"
+documentation = "https://docs.rs/actix-jwks"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -17,9 +20,3 @@ serde = "1.0.81"
 serde_json = "1.0.81"
 thiserror = "1.0.31"
 tracing = "0.1.35"
-
-[workspace]
-
-members = [
-    "./example"
-]
