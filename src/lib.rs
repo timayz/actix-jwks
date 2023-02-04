@@ -165,8 +165,12 @@ impl FromRequest for JwtPayload {
             };
 
             // let jwk = client.get(&token).await?;
-
-            Err(ErrorUnauthorized("unauthorized"))
+            println!("yes");
+            Ok(Self {
+                subject: "sub".into(),
+                token: "nim".into(),
+                payload: jwt::JwtPayload::new(),
+            })
             // let verifier = RS256.verifier_from_jwk(&jwk).map_err(Error::from)?;
             // let (payload, _) = jwt::decode_with_verifier(&token, &verifier).map_err(Error::from)?;
 
