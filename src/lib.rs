@@ -164,29 +164,31 @@ impl FromRequest for JwtPayload {
                 _ => return Err(ErrorBadRequest("authorization is missing from header")),
             };
 
-            let jwk = client.get(&token).await?;
-            let verifier = RS256.verifier_from_jwk(&jwk).map_err(Error::from)?;
-            let (payload, _) = jwt::decode_with_verifier(&token, &verifier).map_err(Error::from)?;
+            // let jwk = client.get(&token).await?;
 
-            let mut validator = JwtPayloadValidator::new();
-            validator.set_base_time(SystemTime::now());
+            Err(ErrorUnauthorized("unauthorized"))
+            // let verifier = RS256.verifier_from_jwk(&jwk).map_err(Error::from)?;
+            // let (payload, _) = jwt::decode_with_verifier(&token, &verifier).map_err(Error::from)?;
 
-            if validator.validate(&payload).is_err() {
-                return Err(ErrorUnauthorized("unauthorized"));
-            }
+            // let mut validator = JwtPayloadValidator::new();
+            // validator.set_base_time(SystemTime::now());
 
-            match (validator.validate(&payload), payload.subject()) {
-                (Ok(_), Some(sub)) => {
-                    req.extensions_mut().insert(payload.clone());
+            // if validator.validate(&payload).is_err() {
+            //     return Err(ErrorUnauthorized("unauthorized"));
+            // }
 
-                    Ok(Self {
-                        subject: sub.into(),
-                        token,
-                        payload,
-                    })
-                }
-                _ => Err(ErrorUnauthorized("unauthorized")),
-            }
+            // match (validator.validate(&payload), payload.subject()) {
+            //     (Ok(_), Some(sub)) => {
+            //         req.extensions_mut().insert(payload.clone());
+
+            //         Ok(Self {
+            //             subject: sub.into(),
+            //             token,
+            //             payload,
+            //         })
+            //     }
+            //     _ => Err(ErrorUnauthorized("unauthorized")),
+            // }
         })
     }
 }
