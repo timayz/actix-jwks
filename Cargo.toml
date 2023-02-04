@@ -11,12 +11,12 @@ documentation = "https://docs.rs/actix-jwks"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-awc = { version = "3.0.1", features = ["rustls"] }
-actix-web = "4.2.1"
+awc = { version = "3.1.0", features = ["rustls"] }
+actix-web = "4.3.0"
 josekit = "0.8.1"
 parking_lot = "0.12.1"
-futures-util = "0.3.25"
-serde = "1.0.147"
-serde_json = "1.0.87"
-thiserror = "1.0.37"
+futures-util = "0.3.26"
+serde = "1.0.152"
+serde_json = "1.0.91"
+thiserror = "1.0.38"
 tracing = "0.1.37"
