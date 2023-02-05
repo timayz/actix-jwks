@@ -1,44 +1,50 @@
-use std::sync::Arc;
-use std::{pin::Pin, time::SystemTime};
+use futures_util::Future;
+use jwks_client_rs::source::WebSource;
+use jwks_client_rs::{JsonWebKey, JwksClient as JwksClientRS, JwksClientError};
+use reqwest::Url;
+use serde::{Deserialize, Serialize};
+use std::pin::Pin;
 use tracing::error;
 
 use actix_web::{
-    error::{ErrorBadRequest, ErrorUnauthorized},
+    error::ErrorBadRequest,
     http::{header, StatusCode},
     web::Data,
-    Error as ActixError, FromRequest, HttpMessage, HttpResponse, HttpResponseBuilder,
-    ResponseError,
+    Error as ActixError, FromRequest, HttpResponse, HttpResponseBuilder, ResponseError,
 };
 
-use futures_util::Future;
+// use futures_util::Future;
 
-use josekit::{
-    jwk::{Jwk, JwkSet},
-    jws::RS256,
-    jwt,
-    jwt::JwtPayloadValidator,
-};
-use parking_lot::RwLock;
+// use josekit::{
+//     jwk::{Jwk, JwkSet},
+//     jws::RS256,
+//     jwt,
+//     jwt::JwtPayloadValidator,
+// };
+// use parking_lot::RwLock;
 use thiserror::Error as ThisError;
 
 #[derive(ThisError, Debug)]
 pub enum Error {
-    #[error("josekit: {0}")]
-    JoseError(josekit::JoseError),
+    #[error("reqwest: {0}")]
+    Reqwest(reqwest::Error),
 
-    #[error("jwt header key not found: {0}")]
-    JwtHeaderKeyNotFound(String),
+    #[error("jwks_client: {0}")]
+    JwksClient(JwksClientError),
 
-    #[error("jwk not found")]
-    JwkNotFound,
-
-    #[error("failed to fetch jwks keys")]
-    FetchKeysFailed(StatusCode, String),
+    #[error("{0}")]
+    Unknown(String),
 }
 
-impl From<josekit::JoseError> for Error {
-    fn from(e: josekit::JoseError) -> Self {
-        Error::JoseError(e)
+impl From<reqwest::Error> for Error {
+    fn from(e: reqwest::Error) -> Self {
+        Error::Reqwest(e)
+    }
+}
+
+impl From<JwksClientError> for Error {
+    fn from(e: JwksClientError) -> Self {
+        Error::JwksClient(e)
     }
 }
 
@@ -63,81 +69,41 @@ impl ResponseError for Error {
 ///
 /// use actix_jwks::JwksClient;
 ///
-/// let jwks_client = JwksClient::new("http://127.0.0.1:4456/.well-known/jwks.json");
+/// let jwks_client = JwksClient::new("http://127.0.0.1:4456/.well-known/jwks.json").unwrap();
 /// ```
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct JwksClient {
-    url: String,
-    jwk_set: Arc<RwLock<JwkSet>>,
+    inner: JwksClientRS<WebSource>,
 }
 
 impl JwksClient {
-    pub fn new<U: Into<String>>(url: U) -> Self {
-        Self {
-            url: url.into(),
-            jwk_set: Arc::new(RwLock::new(JwkSet::new())),
-        }
+    pub fn new<U: Into<String>>(url: U) -> Result<Self, Error> {
+        let source: WebSource = WebSource::builder()
+            .build(Url::parse(&url.into()).map_err(|e| Error::Unknown(e.to_string()))?)?;
+        let client = JwksClientRS::builder().build(source);
+
+        Ok(Self { inner: client })
     }
 
-    pub async fn get(&self, input: &str) -> Result<Jwk, Error> {
-        let header = jwt::decode_header(input)?;
-
-        let key_id = match header.claim("kid").and_then(|key_id| key_id.as_str()) {
-            Some(key_id) => key_id,
-            _ => return Err(Error::JwtHeaderKeyNotFound("kid".to_owned())),
-        };
-
-        let alg = match header.claim("alg").and_then(|key_id| key_id.as_str()) {
-            Some(alg) => alg,
-            _ => return Err(Error::JwtHeaderKeyNotFound("alg".to_owned())),
-        };
-
-        {
-            let jwk_set = self.jwk_set.read();
-
-            for jwk in jwk_set.get(key_id.to_string().as_ref()) {
-                if jwk.algorithm().unwrap_or("") == alg {
-                    return Ok(jwk.clone());
-                }
-            }
-        }
-
-        let fetched_jwk_set = self.fetch_keys().await?;
-
-        for jwk in fetched_jwk_set.get(key_id) {
-            if jwk.algorithm().unwrap_or("") != alg {
-                continue;
-            }
-
-            {
-                let mut jwk_set = self.jwk_set.write();
-                *jwk_set = fetched_jwk_set.clone();
-            }
-
-            return Ok(jwk.clone());
-        }
-
-        Err(Error::JwkNotFound)
+    pub async fn get(&self, kid: &str) -> Result<JsonWebKey, JwksClientError> {
+        self.inner.get(kid).await
     }
+}
 
-    async fn fetch_keys(&self) -> Result<JwkSet, Error> {
-        let client = awc::Client::default();
-
-        let req = client.get(&self.url);
-        let mut res = req.send().await.unwrap();
-        let body = match res.status() {
-            StatusCode::OK => res.body().await.unwrap(),
-            _ => return Err(Error::FetchKeysFailed(res.status(), self.url.to_owned())),
-        };
-
-        Ok(JwkSet::from_bytes(&body)?)
-    }
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Claims {
+    aud: String, // Optional. Audience
+    exp: usize, // Required (validate_exp defaults to true in validation). Expiration time (as UTC timestamp)
+    iat: usize, // Optional. Issued at (as UTC timestamp)
+    iss: String, // Optional. Issuer
+    nbf: usize, // Optional. Not Before (as UTC timestamp)
+    sub: String, // Optional. Subject (whom token refers to)
 }
 
 pub struct JwtPayload {
     pub subject: String,
     pub token: String,
-    pub payload: jwt::JwtPayload,
+    pub payload: Claims,
 }
 
 impl FromRequest for JwtPayload {
@@ -164,35 +130,17 @@ impl FromRequest for JwtPayload {
                 _ => return Err(ErrorBadRequest("authorization is missing from header")),
             };
 
-            let jwk = client.get(&token).await?;
+            let payload = client
+                .inner
+                .decode::<Claims>(&token, &[] as &[String])
+                .await
+                .map_err(Error::from)?;
 
-            println!("yes");
-            let verifier = RS256.verifier_from_jwk(&jwk).map_err(Error::from)?;
-            println!("yes1");
-            let (payload, _) = jwt::decode_with_verifier(&token, &verifier).map_err(Error::from)?;
-
-            println!("yes2");
-            let mut validator = JwtPayloadValidator::new();
-            validator.set_base_time(SystemTime::now());
-
-            println!("yes3");
-            if validator.validate(&payload).is_err() {
-                return Err(ErrorUnauthorized("unauthorized"));
-            }
-
-            println!("yes4");
-            match (validator.validate(&payload), payload.subject()) {
-                (Ok(_), Some(sub)) => {
-                    req.extensions_mut().insert(payload.clone());
-
-                    Ok(Self {
-                        subject: sub.into(),
-                        token,
-                        payload,
-                    })
-                }
-                _ => Err(ErrorUnauthorized("unauthorized")),
-            }
+            Ok(Self {
+                subject: payload.sub.to_owned(),
+                token,
+                payload,
+            })
         })
     }
 }
