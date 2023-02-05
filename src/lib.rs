@@ -155,17 +155,17 @@ impl FromRequest for JwtPayload {
             .clone();
 
         Box::pin(async move {
-            // let token = match req
-            //     .headers()
-            //     .get(header::AUTHORIZATION)
-            //     .and_then(|v| v.to_str().ok())
-            // {
-            //     Some(value) => value.replace("Bearer ", ""),
-            //     _ => return Err(ErrorBadRequest("authorization is missing from header")),
-            // };
+            let token = match req
+                .headers()
+                .get(header::AUTHORIZATION)
+                .and_then(|v| v.to_str().ok())
+            {
+                Some(value) => value.replace("Bearer ", ""),
+                _ => return Err(ErrorBadRequest("authorization is missing from header")),
+            };
 
-            // let jwk = client.get(&token).await?;
             println!("yes");
+            let jwk = client.get(&token).await?;
             Err(ErrorUnauthorized("unauthorized"))
             // let verifier = RS256.verifier_from_jwk(&jwk).map_err(Error::from)?;
             // let (payload, _) = jwt::decode_with_verifier(&token, &verifier).map_err(Error::from)?;
