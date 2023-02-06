@@ -12,10 +12,11 @@ documentation = "https://docs.rs/actix-jwks"
 
 [dependencies]
 actix-web = "4.3.0"
-jwks_client_rs = "0.4.0"
+#jwks_client_rs = "0.4.0"
 futures-util = "0.3.26"
 serde = "1.0.152"
 serde_json = "1.0.91"
 thiserror = "1.0.38"
 tracing = "0.1.37"
-reqwest = { version = "0.11.14", features = ["json"] }
+#reqwest = { version = "0.11.14", features = ["json"] }
+jwksclient2 = "0.2.0"

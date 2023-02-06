@@ -1,7 +1,8 @@
 use futures_util::Future;
-use jwks_client_rs::source::WebSource;
-use jwks_client_rs::{JsonWebKey, JwksClient as JwksClientRS, JwksClientError};
-use reqwest::Url;
+use jwksclient2::keyset::KeyStore;
+// use jwks_client_rs::source::WebSource;
+// use jwks_client_rs::{JsonWebKey, JwksClient as JwksClientRS, JwksClientError};
+// use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use std::pin::Pin;
 use tracing::error;
@@ -26,27 +27,26 @@ use thiserror::Error as ThisError;
 
 #[derive(ThisError, Debug)]
 pub enum Error {
-    #[error("reqwest: {0}")]
-    Reqwest(reqwest::Error),
+    // #[error("reqwest: {0}")]
+    // Reqwest(reqwest::Error),
 
-    #[error("jwks_client: {0}")]
-    JwksClient(JwksClientError),
-
+    // #[error("jwks_client: {0}")]
+    // JwksClient(JwksClientError),
     #[error("{0}")]
     Unknown(String),
 }
 
-impl From<reqwest::Error> for Error {
-    fn from(e: reqwest::Error) -> Self {
-        Error::Reqwest(e)
-    }
-}
+// impl From<reqwest::Error> for Error {
+//     fn from(e: reqwest::Error) -> Self {
+//         Error::Reqwest(e)
+//     }
+// }
 
-impl From<JwksClientError> for Error {
-    fn from(e: JwksClientError) -> Self {
-        Error::JwksClient(e)
-    }
-}
+// impl From<JwksClientError> for Error {
+//     fn from(e: JwksClientError) -> Self {
+//         Error::JwksClient(e)
+//     }
+// }
 
 impl ResponseError for Error {
     fn status_code(&self) -> StatusCode {
@@ -73,21 +73,23 @@ impl ResponseError for Error {
 /// ```
 #[derive(Clone)]
 pub struct JwksClient {
-    inner: JwksClientRS<WebSource>,
+    inner: Option<bool>,
+    // inner: JwksClientRS<WebSource>,
 }
 
 impl JwksClient {
     pub fn new<U: Into<String>>(url: U) -> Result<Self, Error> {
-        let source: WebSource = WebSource::builder()
-            .build(Url::parse(&url.into()).map_err(|e| Error::Unknown(e.to_string()))?)?;
-        let client = JwksClientRS::builder().build(source);
+        // let source: WebSource = WebSource::builder()
+        //     .build(Url::parse(&url.into()).map_err(|e| Error::Unknown(e.to_string()))?)?;
+        // let client = JwksClientRS::builder().build(source);
 
-        Ok(Self { inner: client })
+        // Ok(Self { inner: client })
+        Ok(Self { inner: None })
     }
 
-    pub async fn get(&self, kid: &str) -> Result<JsonWebKey, JwksClientError> {
-        self.inner.get(kid).await
-    }
+    // pub async fn get(&self, kid: &str) -> Result<JsonWebKey, JwksClientError> {
+    //     self.inner.get(kid).await
+    // }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -121,26 +123,44 @@ impl FromRequest for JwtPayload {
             .clone();
 
         Box::pin(async move {
-            let token = match req
-                .headers()
-                .get(header::AUTHORIZATION)
-                .and_then(|v| v.to_str().ok())
-            {
-                Some(value) => value.replace("Bearer ", ""),
-                _ => return Err(ErrorBadRequest("authorization is missing from header")),
-            };
+            let jkws_url = "https://raw.githubusercontent.com/jfbilodeau/jwks-client/0.1.8/test/test-jwks.json";
 
-            let payload = client
-                .inner
-                .decode::<Claims>(&token, &[] as &[String])
-                .await
-                .map_err(Error::from)?;
+            let key_set = KeyStore::new_from(jkws_url.to_owned()).await.unwrap();
 
-            Ok(Self {
-                subject: payload.sub.to_owned(),
-                token,
-                payload,
-            })
+            // ...
+
+            let token = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IjEifQ.eyJuYW1lIjoiQWRhIExvdmVsYWNlIiwiaXNzIjoiaHR0cHM6Ly9jaHJvbm9nZWFycy5jb20vdGVzdCIsImF1ZCI6InRlc3QiLCJhdXRoX3RpbWUiOjEwMCwidXNlcl9pZCI6InVpZDEyMyIsInN1YiI6InNidTEyMyIsImlhdCI6MjAwLCJleHAiOjUwMCwibmJmIjozMDAsImVtYWlsIjoiYWxvdmVsYWNlQGNocm9ub2dlYXJzLmNvbSJ9.eTQnwXrri_uY55fS4IygseBzzbosDM1hP153EZXzNlLH5s29kdlGt2mL_KIjYmQa8hmptt9RwKJHBtw6l4KFHvIcuif86Ix-iI2fCpqNnKyGZfgERV51NXk1THkgWj0GQB6X5cvOoFIdHa9XvgPl_rVmzXSUYDgkhd2t01FOjQeeT6OL2d9KdlQHJqAsvvKVc3wnaYYoSqv2z0IluvK93Tk1dUBU2yWXH34nX3GAVGvIoFoNRiiFfZwFlnz78G0b2fQV7B5g5F8XlNRdD1xmVZXU8X2-xh9LqRpnEakdhecciFHg0u6AyC4c00rlo_HBb69wlXajQ3R4y26Kpxn7HA";
+
+            match key_set.verify(token) {
+                Ok(jwt) => {
+                    println!("name={}", jwt.payload().get_str("name").unwrap());
+                }
+                Err(e) => {
+                    eprintln!("Could not verify token. Reason: {}", e.msg);
+                }
+            }
+            // let token = match req
+            //     .headers()
+            //     .get(header::AUTHORIZATION)
+            //     .and_then(|v| v.to_str().ok())
+            // {
+            //     Some(value) => value.replace("Bearer ", ""),
+            //     _ => return Err(ErrorBadRequest("authorization is missing from header")),
+            // };
+
+            // let payload = client
+            //     .inner
+            //     .decode::<Claims>(&token, &[] as &[String])
+            //     .await
+            //     .map_err(Error::from)?;
+
+            // Ok(Self {
+            //     subject: payload.sub.to_owned(),
+            //     token,
+            //     payload,
+            // })
+
+            Err(ErrorBadRequest("authorization is missing from header"))
         })
     }
 }
