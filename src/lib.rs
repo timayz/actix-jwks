@@ -1,11 +1,11 @@
 use futures_util::Future;
-use jwt::{Jwt};
+use jwt::Jwt;
 use keyset::KeyStore;
 use serde_json::Value;
 use std::{pin::Pin, sync::Arc};
-use tokio::sync::{RwLock};
-use tracing::error;
 use thiserror::Error as ThisError;
+use tokio::sync::RwLock;
+use tracing::error;
 
 use actix_web::{
     error::ErrorBadRequest,
@@ -68,6 +68,7 @@ impl ResponseError for Error {
 #[derive(Clone)]
 pub struct JwksClient {
     inner: Arc<RwLock<KeyStore>>,
+    insecure: bool,
 }
 
 impl JwksClient {
@@ -76,11 +77,22 @@ impl JwksClient {
 
         Ok(Self {
             inner: Arc::new(RwLock::new(store)),
+            insecure: false,
         })
+    }
+
+    pub fn set_insecure(mut self, v: bool) -> Self {
+        self.insecure = v;
+
+        self
     }
 
     pub async fn verify(&self, token: &str) -> Result<Jwt, error::Error> {
         let read = self.inner.read().await;
+
+        if self.insecure {
+            return read.decode(token);
+        }
 
         if read.should_refresh().unwrap_or(false) {
             drop(read);
