@@ -73,18 +73,32 @@ pub struct JwksClient {
 
 impl JwksClient {
     pub async fn new<U: Into<String>>(url: U) -> Result<Self, Error> {
-        let store = KeyStore::new_from(url.into()).await?;
-
-        Ok(Self {
-            inner: Arc::new(RwLock::new(store)),
-            insecure: false,
-        })
+        Self::build(Some(url)).await
     }
 
-    pub fn set_insecure(mut self, v: bool) -> Self {
-        self.insecure = v;
+    pub async fn insecure() -> Result<Self, Error> {
+        Self::build(None::<String>).await
+    }
 
-        self
+    pub async fn build<U: Into<String>>(url: Option<U>) -> Result<Self, Error> {
+        match url {
+            Some(url) => {
+                let store = KeyStore::new_from(url.into()).await?;
+
+                Ok(Self {
+                    inner: Arc::new(RwLock::new(store)),
+                    insecure: false,
+                })
+            }
+            _ => {
+                let store = KeyStore::new();
+
+                Ok(Self {
+                    inner: Arc::new(RwLock::new(store)),
+                    insecure: true,
+                })
+            }
+        }
     }
 
     pub async fn verify(&self, token: &str) -> Result<Jwt, error::Error> {
