@@ -145,15 +145,18 @@ impl Payload {
     }
 
     pub fn expiry(&self) -> Option<SystemTime> {
-        self.exp().map(|time| SystemTime::UNIX_EPOCH.add(Duration::new(time, 0)))
+        self.exp()
+            .map(|time| SystemTime::UNIX_EPOCH.add(Duration::new(time, 0)))
     }
 
     pub fn issued_at(&self) -> Option<SystemTime> {
-        self.iat().map(|time| SystemTime::UNIX_EPOCH.add(Duration::new(time, 0)))
+        self.iat()
+            .map(|time| SystemTime::UNIX_EPOCH.add(Duration::new(time, 0)))
     }
 
     pub fn not_before(&self) -> Option<SystemTime> {
-        self.nbf().map(|time| SystemTime::UNIX_EPOCH.add(Duration::new(time, 0)))
+        self.nbf()
+            .map(|time| SystemTime::UNIX_EPOCH.add(Duration::new(time, 0)))
     }
 }
 
@@ -198,7 +201,9 @@ impl Jwt {
     }
 
     pub fn early_time(&self, time: SystemTime) -> Option<bool> {
-        self.payload.not_before().map(|token_time| time < token_time)
+        self.payload
+            .not_before()
+            .map(|token_time| time < token_time)
     }
 
     pub fn issued_by(&self, issuer: &str) -> Option<bool> {
