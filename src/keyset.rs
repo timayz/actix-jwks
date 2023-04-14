@@ -62,8 +62,6 @@ pub struct KeyStore {
 
 impl KeyStore {
     pub fn new() -> KeyStore {
-        
-
         KeyStore {
             key_url: "".to_owned(),
             keys: vec![],
@@ -316,11 +314,7 @@ fn verify_signature(e: &Vec<u8>, n: &Vec<u8>, message: &str, signature: &str) ->
         .decode(signature)
         .or(Err(err_sig("Could not base64 decode signature")))?;
 
-    let result = pkc.verify(
-        &RSA_PKCS1_2048_8192_SHA256,
-        message_bytes,
-        &signature_bytes,
-    );
+    let result = pkc.verify(&RSA_PKCS1_2048_8192_SHA256, message_bytes, &signature_bytes);
 
     result.or(Err(err_cer("Signature does not match certificate")))
 }
@@ -333,4 +327,10 @@ fn decode_segment<T: DeserializeOwned>(segment: &str) -> Result<T, Error> {
     let decoded: T = serde_json::from_str(&slice).or(Err(err_inv("Failed to decode segment")))?;
 
     Ok(decoded)
+}
+
+impl Default for KeyStore {
+    fn default() -> Self {
+        Self::new()
+    }
 }
