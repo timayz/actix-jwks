@@ -62,16 +62,16 @@ pub struct KeyStore {
 
 impl KeyStore {
     pub fn new() -> KeyStore {
-        let key_store = KeyStore {
+        
+
+        KeyStore {
             key_url: "".to_owned(),
             keys: vec![],
             refresh_interval: 0.5,
             load_time: None,
             expire_time: None,
             refresh_time: None,
-        };
-
-        key_store
+        }
     }
 
     pub async fn new_from(jkws_url: String) -> Result<KeyStore, Error> {
@@ -170,7 +170,7 @@ impl KeyStore {
         &self,
         token: &str,
     ) -> Result<(Header, Payload, Signature, HeaderBody), Error> {
-        let raw_segments: Vec<&str> = token.split(".").collect();
+        let raw_segments: Vec<&str> = token.split('.').collect();
         if raw_segments.len() != 3 {
             return Err(err_inv("JWT does not have 3 segments"));
         }
@@ -255,10 +255,7 @@ impl KeyStore {
     ///
     /// None if keys do not have an expiration time
     pub fn keys_expired(&self) -> Option<bool> {
-        match self.expire_time {
-            Some(expire) => Some(expire <= SystemTime::now()),
-            None => None,
-        }
+        self.expire_time.map(|expire| expire <= SystemTime::now())
     }
 
     /// Specifies the interval (as a fraction) when the key store should refresh it's key.
@@ -316,12 +313,12 @@ fn verify_signature(e: &Vec<u8>, n: &Vec<u8>, message: &str, signature: &str) ->
     let pkc = RsaPublicKeyComponents { e, n };
     let message_bytes = &message.as_bytes().to_vec();
     let signature_bytes = engine::general_purpose::URL_SAFE_NO_PAD
-        .decode(&signature)
+        .decode(signature)
         .or(Err(err_sig("Could not base64 decode signature")))?;
 
     let result = pkc.verify(
         &RSA_PKCS1_2048_8192_SHA256,
-        &message_bytes,
+        message_bytes,
         &signature_bytes,
     );
 
@@ -330,7 +327,7 @@ fn verify_signature(e: &Vec<u8>, n: &Vec<u8>, message: &str, signature: &str) ->
 
 fn decode_segment<T: DeserializeOwned>(segment: &str) -> Result<T, Error> {
     let raw = engine::general_purpose::URL_SAFE_NO_PAD
-        .decode(&segment)
+        .decode(segment)
         .or(Err(err_inv("Failed to decode segment")))?;
     let slice = String::from_utf8_lossy(&raw);
     let decoded: T = serde_json::from_str(&slice).or(Err(err_inv("Failed to decode segment")))?;
