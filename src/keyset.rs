@@ -1,4 +1,3 @@
-use std::time::{Duration, SystemTime};
 use base64::{engine, Engine};
 use regex::Regex;
 use reqwest;
@@ -9,6 +8,7 @@ use serde::{
     {Deserialize, Serialize},
 };
 use serde_json::Value;
+use std::time::{Duration, SystemTime};
 
 use crate::error::*;
 use crate::jwt::*;
